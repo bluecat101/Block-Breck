@@ -59,8 +59,8 @@ class Bar # 棒
       if((len = line.count(BAR_MARK)) != 0) # 棒の存在する行の時
         position = line.index(BAR_MARK) # 棒が何列目にあるかを取得
         bar_line = line                 # 棒のある1行を格納
-        is_rightEdge = line[position + len ] == EDGE_MARK # 右端かを取得
-        is_leftEdge  = line[position - 1]    == EDGE_MARK # 左端かを取得
+        is_rightEdge = line[position + len ] != BACKGROUND_MARK # 右端かを取得
+        is_leftEdge  = line[position - 1]    != BACKGROUND_MARK  # 左端かを取得
         if(direction == "C" && !is_rightEdge)  # 右が入力されてかつ右端でないなら
           bar_line[position] = BACKGROUND_MARK # 棒の一番左を背景色に
           bar_line[position + len] = BAR_MARK  # 棒の一番右にさらにもう1文字右に棒を追加
@@ -100,6 +100,7 @@ class Ball # ボール
     arrangement = InOut.arrangement # 配列を読み込む
     # 各ボールの位置に対して次動いた際の位置がどこに移動するのかを考える
     next_position = Array.new(2){|i| # ボールの大きさだけ繰り返す
+      # 次の位置をcaseに当てる
       case arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]
       when  BAR_MARK , EDGE_MARK then 0 # 壁か棒がある
       when BACKGROUND_MARK,BALL_MARK then 1 # ボールか何もない
@@ -135,7 +136,7 @@ ball = Ball.new() # オブジェクト生成
 InOut.readFile()  # 画面の表示
 while true #　Ctrl+cが押されるまで続ける
   begin
-    Timeout.timeout(0.1) do # timeoutを設定,これにより、入力とボールの移動を可能にしている
+    Timeout.timeout(0.2) do # timeoutを設定,これにより、入力とボールの移動を可能にしている
       ball.move        # ボールを動かす
       (FILE_LINE_SIZE-1).times{print"\e[A"} # カーソルを一番上に持っていく
       InOut.readFile() # 画面を更新 
@@ -150,6 +151,10 @@ while true #　Ctrl+cが押されるまで続ける
       end
       (FILE_LINE_SIZE-1).times{print"\e[A"} # カーソルを一番上に持っていく
       InOut.readFile()                      # 画面の更新
+      while true
+        _ = STDIN.getch
+      end
+      sleep
     end
   rescue Timeout::Error
   end
