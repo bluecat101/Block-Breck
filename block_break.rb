@@ -7,7 +7,7 @@ BALL_MARK = "7"
 
 class InOut
   class << self
-    def readfile
+    def readFile
       @arrangement = arrangement()
       color_status = 9
       @arrangement.each{|line|
@@ -33,7 +33,7 @@ class InOut
       }
     end
 
-    # def move_cursor(line,row,len,direction) # line,rowは先頭が0
+    # def moveCursor(line,row,len,direction) # line,rowは先頭が0
     #   print(line,row,len,"\n")
     #   cursor_line = @@arrangement[line].split('')
     #   cursor_line[row] = CURSOR_MARK
@@ -49,11 +49,21 @@ class InOut
         f.write(str)
       }
     end
+
+    def updateFileBlock(line,row)
+      File.open("input.txt", mode = "r+"){|f|
+        (line).times{ 
+          f.readline  # 1行空読みする
+        }
+        f.seek(row,IO::SEEK_CUR)
+        f.write("9")
+      }
+    end
   end
 end
 
 class Operation
-  def self.move_cursor(direction)
+  def self.moveCursor(direction)
     # InOut.getArrangement
 
     InOut.arrangement.each_with_index{|line,i|
@@ -106,13 +116,14 @@ class Ball
     next_position = Array.new(4){|i|
       case arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]
       when  CURSOR_MARK , EDGE_MARK 
-        puts "$ or cursor[#{@y+@@y_ball_size[i]+@@y_amount_change[@direction]},#{@x+@@x_ball_size[i]+@@x_amount_change[@direction]}],#{arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]}"
+        # puts "$ or cursor[#{@y+@@y_ball_size[i]+@@y_amount_change[@direction]},#{@x+@@x_ball_size[i]+@@x_amount_change[@direction]}],#{arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]}"
         0
-      when "9","5"
-        puts "空白"
+      when "9",BALL_MARK
+        # puts "空白"
         1
       else 
-        puts "block[#{@y+@@y_ball_size[i]+@@y_amount_change[@direction]},#{@x+@@x_ball_size[i]+@@x_amount_change[@direction]}],#{arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]}"
+        # puts "block[#{@y+@@y_ball_size[i]+@@y_amount_change[@direction]},#{@x+@@x_ball_size[i]+@@x_amount_change[@direction]}],#{arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]}"
+        InOut.updateFileBlock(@y+@@y_ball_size[i]+@@y_amount_change[@direction],@x+@@x_ball_size[i]+@@x_amount_change[@direction])
         # 消す操作
         0
       end
@@ -151,21 +162,28 @@ class Ball
 end
 
 ball = Ball.new()
-InOut.readfile()
-# Operation.move_cursor("C")
+count = 0
+InOut.readFile()
+# Operation.moveCursor("C")
 # exit
 while (c = STDIN.getch) != "\C-c"
   if(c == "\e" && (_c = STDIN.getch) == "[")
     second_c = STDIN.getch
     if(second_c == "C" || second_c == "D")
-      Operation.move_cursor(second_c)
+      Operation.moveCursor(second_c)
     end
   elsif (c == "n")
     ball.move
   else
     print c
   end
-  # 14.times{print"\e[A"}
-  InOut.readfile()
+  # p count
+  if(count > 10)
+    ball.move
+    count = 0
+  end
+  14.times{print"\e[A"}
+  InOut.readFile()
+  count += 1
 end
 puts("end break brock")
