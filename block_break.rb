@@ -1,6 +1,8 @@
 # p `echo "aaa"`
 # p "hello world"
 require 'io/console'
+require 'timeout'
+
 CURSOR_MARK = "5"
 EDGE_MARK = "$"
 BALL_MARK = "7"
@@ -32,15 +34,6 @@ class InOut
         f.readlines
       }
     end
-
-    # def moveCursor(line,row,len,direction) # line,rowは先頭が0
-    #   print(line,row,len,"\n")
-    #   cursor_line = @@arrangement[line].split('')
-    #   cursor_line[row] = CURSOR_MARK
-    #   cursor_line[row + len] = "9"
-    #   updateFileLine(line,cursor_line.join)
-    # end
-
     def updateFileLine(line,str)
       File.open("input.txt", mode = "r+"){|f|
         (line).times{ 
@@ -62,10 +55,8 @@ class InOut
   end
 end
 
-class Operation
-  def self.moveCursor(direction)
-    # InOut.getArrangement
-
+class Cursor
+  def self.move(direction)
     InOut.arrangement.each_with_index{|line,i|
       if((len = line.count(CURSOR_MARK))!=0)
         position = line.index(CURSOR_MARK)
@@ -87,13 +78,13 @@ class Operation
 end
 
 class Ball
-@@x_amount_change = {0 => 0, 1 => 1, 2 => 1, 3 => 1, 4 => 0, 5 => -1, 6 => -1, 7 => -1}
-@@y_amount_change = {0 => -1, 1 => -1, 2 => 0, 3 => 1, 4 => 1, 5 => 1, 6 => 0, 7 => -1}
-@@x_ball_size =[0,1,0,1]
-@@y_ball_size =[0,0,0,0]
-@x = nil
-@y = nil
-@direction = nil # 0-7
+  @@x_amount_change = {0 => 0, 1 => 1, 2 => 1, 3 => 1, 4 => 0, 5 => -1, 6 => -1, 7 => -1}
+  @@y_amount_change = {0 => -1, 1 => -1, 2 => 0, 3 => 1, 4 => 1, 5 => 1, 6 => 0, 7 => -1}
+  @@x_ball_size =[0,1,0,1]
+  @@y_ball_size =[0,0,0,0]
+  @x = nil
+  @y = nil
+  @direction = nil # 0-7
   def initialize()
     InOut.arrangement.each_with_index{|line,i|
       if(position = line.index(BALL_MARK))
@@ -103,40 +94,22 @@ class Ball
     }
     @direction = 4
   end
-  # def x() 
-  #   puts x
-  #   x 
-  # end
-  # def y() y end
   def move
-    # puts @@y_amount_change[@direction]
     arrangement = InOut.arrangement
-    # puts arrangement[@y+@@y_amount_change[@direction]][@x+@@x_amount_change[@direction]]
-    # puts(arrangement)
     next_position = Array.new(4){|i|
       case arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]
-      when  CURSOR_MARK , EDGE_MARK 
-        # puts "$ or cursor[#{@y+@@y_ball_size[i]+@@y_amount_change[@direction]},#{@x+@@x_ball_size[i]+@@x_amount_change[@direction]}],#{arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]}"
-        0
-      when "9",BALL_MARK
-        # puts "空白"
-        1
+      when  CURSOR_MARK , EDGE_MARK then 0
+      when "9",BALL_MARK then 1
       else 
-        # puts "block[#{@y+@@y_ball_size[i]+@@y_amount_change[@direction]},#{@x+@@x_ball_size[i]+@@x_amount_change[@direction]}],#{arrangement[@y+@@y_ball_size[i]+@@y_amount_change[@direction]][@x+@@x_ball_size[i]+@@x_amount_change[@direction]]}"
         InOut.updateFileBlock(@y+@@y_ball_size[i]+@@y_amount_change[@direction],@x+@@x_ball_size[i]+@@x_amount_change[@direction])
-        # 消す操作
         0
       end
-      # @@y_amount_change[@direction]
-      # puts "aaa"
     }
     if(next_position.count(1) == 4)
-      puts("")
       ball_line_now = arrangement[@y]
       ball_line_now[@x] = "9"
       ball_line_now[@x+1] = "9"
       InOut.updateFileLine(@y,ball_line_now)
-      # end
       @x += @@x_amount_change[@direction]
       @y += @@y_amount_change[@direction]
       ball_line_next = arrangement[@y]
@@ -144,46 +117,37 @@ class Ball
       ball_line_next[@x+1] = BALL_MARK
       InOut.updateFileLine(@y,ball_line_next)
     else
-      # next_position.select{|status| status==0}.sample
       @direction = reflect()
     end
-    # @direction = reflect()
-    # @direction = reflect()
-
-
-
-      
   end
   def reflect
-    # puts ("[direction]#@direction")
-    p Array.new(3){|i| (@direction+i+3)%8}.sample
-    
+    Array.new(3){|i| (@direction+i+3)%8}.sample
   end
 end
 
 ball = Ball.new()
 count = 0
 InOut.readFile()
-# Operation.moveCursor("C")
-# exit
-while (c = STDIN.getch) != "\C-c"
-  if(c == "\e" && (_c = STDIN.getch) == "[")
-    second_c = STDIN.getch
-    if(second_c == "C" || second_c == "D")
-      Operation.moveCursor(second_c)
+while true
+  begin
+    Timeout.timeout(0.1) do
+      ball.move
+      14.times{print"\e[A"}
+      InOut.readFile()
+      c = STDIN.getch
+      if(c=="\C-c")
+        exit
+      elsif(c == "\e" && (_c = STDIN.getch) == "[")
+        second_c = STDIN.getch
+        if(second_c == "C" || second_c == "D")
+          Cursor.move(second_c)
+        end
+      end
+      14.times{print"\e[A"}
+      InOut.readFile()
     end
-  elsif (c == "n")
-    ball.move
-  else
-    print c
+  rescue Timeout::Error
   end
-  # p count
-  if(count > 10)
-    ball.move
-    count = 0
-  end
-  14.times{print"\e[A"}
-  InOut.readFile()
-  count += 1
 end
 puts("end break brock")
+
